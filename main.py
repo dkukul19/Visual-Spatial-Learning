@@ -31,6 +31,15 @@ random_iteration_under = [num for num in range(len(under_objects_list))]
 random_iteration_on = [num for num in range(len(on_objects_list))]
 random_iteration_in_front_of = [num for num in range(len(in_front_of_objects_list))]
 
+print('length of list of objects', len(list_of_objects))
+print('length of list of objects UNDER', len(under_objects_list))
+print('length of list of objects ON', len(on_objects_list))
+print('length of list of objects IN FRONT OF BEHIND', len(in_front_of_objects_list))
+
+
+
+
+
 random.shuffle(random_iteration)
 random.shuffle(random_iteration_under)
 random.shuffle(random_iteration_on)
@@ -40,17 +49,21 @@ random_index = random_iteration[0]  # to iterate over all objects (using list_of
 random_index_under = random_iteration_under[0]
 random_index_on = random_iteration_on[0]
 random_index_in_front_of = random_iteration_in_front_of[0]
-
+EPOCH_START = 13000
+SCENE_AMOUNT = 15000-EPOCH_START
+# (6000,6008)
+# NOTE: 1000 NEXT TO IMAGES' NAMES SHOULD BE CHANGED (REMOVE THE IMG_ PART FROM THE BEGINNING)
 # list_of_objects = list_of_objects[len(list_of_objects)//2:len(list_of_objects)]
-for epoch in range(2020, 2040):
+for epoch in range(EPOCH_START, EPOCH_START+SCENE_AMOUNT):
 
-    c = Controller(port=1071 + epoch)
+    c = Controller(port=1071 + (epoch%SCENE_AMOUNT))
     iteration = epoch
 
     # Increment the index every 4 epochs
     if epoch % 4 == 0: # this statement is not necessary since there's an integer division below, but it increases readability
     # General Case
-        random_index = random_iteration[(epoch//4)%(len(random_iteration)-9)] # -9 is to avoid out of range index on batch of objects.
+        if RELATION != 'IN FRONT OF' and RELATION != 'BEHIND':
+            random_index = random_iteration[(epoch//4)%(len(random_iteration)-9)] # -9 is to avoid out of range index on batch of objects.
     # FOR ON/UNDER
         random_index_under = random_iteration_under[(epoch // 4) % len(random_iteration_under)]  # len = 14
     # FOR IN FRONT OF/BEHIND
@@ -63,7 +76,12 @@ for epoch in range(2020, 2040):
         random_index_on = random_iteration_on[(epoch // (4 * len(random_iteration_under))) % len(random_iteration_on)]
 
     # Same logic as above
-    if epoch % (4 * len(random_iteration_in_front_of)) == 0: # aprx. once in 4*7=28 epochs
+    print(random_iteration_in_front_of)
+    print(len(random_iteration_in_front_of))
+    print(random_index)
+    print(random_index_in_front_of)
+    if (epoch % (4 * len(random_iteration_in_front_of)) == 0) and (RELATION == 'IN FRONT OF' or RELATION == 'BEHIND'): # aprx. once in 4*7=28 epochs
+        print('ENTERED THIS LINE')
         random_index = random_iteration[(epoch // (4 * len(random_iteration_in_front_of))) % len(random_iteration)]
 
     #batch_of_objects = list_of_objects[(random_index):(random_index + 9)]  # [0:9], [1:10]
@@ -89,8 +107,8 @@ for epoch in range(2020, 2040):
         o2 = looked_object
     # the scenes are created with the same structure in 'on' and 'under', only the caption of the scene changes.
     elif RELATION == 'ON' or RELATION == 'UNDER':
-        o1 = on_object
-        o2 = under_object
+        o1 = under_object
+        o2 = on_object
     elif RELATION == 'NEXT TO':
         o1 = list_of_objects[random_index]
         o2 = list_of_objects[(random_index+441)%len(list_of_objects)] # maybe use a different but random index
@@ -109,10 +127,10 @@ for epoch in range(2020, 2040):
         file_name = "img_" + str(epoch) + '_' + o2_label + '_' + relation + '_' + o1_label
     elif RELATION == 'ON':
         # on object on under object
-        file_name = "img_" + str(epoch) + '_' + o1_label + '_' + relation + '_' + o2_label
+        file_name = "img_" + str(epoch) + '_' + o2_label + '_' + relation + '_' + o1_label
     elif RELATION == 'UNDER':
         # under object under on object
-        file_name = "img_" + str(epoch) + '_' + o2_label + '_' + relation + '_' + o1_label
+        file_name = "img_" + str(epoch) + '_' + o1_label + '_' + relation + '_' + o2_label
     elif RELATION == 'NEXT TO':
         # object1 next to object2
         file_name = "img_" + str(epoch) + '_' + o1_label + '_' + relation + '_' + o2_label
@@ -130,7 +148,7 @@ for epoch in range(2020, 2040):
         truth_label = '0'
     # write the label into the file
     with open("Data_Labels", "a") as f:
-        if RELATION == 'ON' or RELATION == 'NEXT TO':
+        if RELATION == 'UNDER' or RELATION == 'NEXT TO':
             f.write(
                 "{\"image\":\"" + file_name + ".jpg\",\"image_link\":\"\",\"caption\":\"The " + o1_label + " is " + relation + " the " + o2_label + ".\",\"label\":" + truth_label + ",\"relation\":\"" + relation + "\",\"annotator_id\":0,\"vote_true_validator_id\":[],\"vote_false_validator_id\":[]}")
             f.write("\n")
@@ -532,7 +550,7 @@ for epoch in range(2020, 2040):
     """
     time_steps = 2
     if RELATION == 'NEXT TO':
-        time_steps = 50
+        time_steps = 100
     for i in range(time_steps):
         # bottom_objects_top_point = float(om.bounds[object_id].top[1])
         # top_objects_bottom_point = float(om.bounds[object_id_1].bottom[1])
@@ -556,7 +574,7 @@ for epoch in range(2020, 2040):
                         # Get a PIL image.
                         pil_image = TDWUtils.get_pil_image(images=images, index=j)
                 # Save the image.
-                TDWUtils.save_images(images=images, filename=file_name, output_directory=output_directory)
+                TDWUtils.save_images(images=images, filename=file_name[4:], output_directory=output_directory)
     c.communicate({"$type": "terminate"})
 
 """ #This part is only for saving the image.
