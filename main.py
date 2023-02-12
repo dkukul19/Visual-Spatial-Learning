@@ -2,7 +2,7 @@ import os
 import random
 import time
 
-import Change_File_Name
+import Util
 
 batch_of_objects = ['s' for i in range(9)]
 random.seed(441)
@@ -15,7 +15,7 @@ from tdw.add_ons.third_person_camera import ThirdPersonCamera
 from tdw.output_data import OutputData, Bounds
 from tdw.scene_data.scene_bounds import SceneBounds
 from tdw.librarian import ModelLibrarian
-from tdw.output_data import OutputData, Images
+from tdw.output_data import OutputData, Images,SegmentationColors, IdPassSegmentationColors
 from tdw.add_ons.image_capture import ImageCapture
 from tdw.backend.paths import EXAMPLE_CONTROLLER_OUTPUT_PATH
 
@@ -176,8 +176,11 @@ for epoch in range(EPOCH_START, EPOCH_START+SCENE_AMOUNT):
     REFLECTIONS = True
 
     table_id = c.get_unique_id()
+    print('table id',table_id)
     object_id = c.get_unique_id()
+    print('object_id',object_id)
     object_id_1 = c.get_unique_id()
+    print('object_id_1',object_id_1)
     object_id_2 = c.get_unique_id()
     object_id_3 = c.get_unique_id()
     object_id_4 = c.get_unique_id()
@@ -185,6 +188,11 @@ for epoch in range(EPOCH_START, EPOCH_START+SCENE_AMOUNT):
     object_id_6 = c.get_unique_id()
     object_id_7 = c.get_unique_id()
     object_id_8 = c.get_unique_id()
+
+    object_names = {table_id: "table",
+                    object_id: o1_label,
+                    object_id_1: o2_label,
+                    }
 
     c.communicate(TDWUtils.create_empty_room(12, 12))
     c.communicate({"$type": "set_screen_size", "width": 1024, "height": 1024})
@@ -524,7 +532,10 @@ for epoch in range(EPOCH_START, EPOCH_START+SCENE_AMOUNT):
                      {"$type": "set_img_pass_encoding",
                       "value": "False"}])
 
+
     resp = c.communicate(commands)
+
+
     if (RELATION == 'IN FRONT OF') and ((epoch % 4 == 0) or (epoch % 4 == 1)):
         c.communicate(
             {"$type": "object_look_at", "other_object_id": object_id_1, "id": object_id})  # ojb1 is looking at obj2
@@ -589,17 +600,56 @@ for epoch in range(EPOCH_START, EPOCH_START+SCENE_AMOUNT):
                 # Save the image.
                 TDWUtils.save_images(images=images, filename=file_name[4:], output_directory=output_directory)
 
-    #c.communicate({"$type": "destroy_all_objects"})
+
+    commands.extend([{"$type": "set_pass_masks",
+                      "avatar_id": "a",
+                      "pass_masks": ["_id"]},
+                     {"$type": "send_segmentation_colors",
+                      "frequency": "once"},
+                     {"$type": "send_id_pass_segmentation_colors",
+                      "frequency": "always"}])
 
 
-    #try:
-    #    change_file_name((output_directory+"/a/id_0000.png"),(file_name[4:]+"_segmentation.png"))
-    #except:
-    #    pass
+    resp = c.communicate(commands)
+    # Get each segmentation color.
+    segmentation_colors_per_object = dict()
+    segmentation_colors_in_image = list()
+
+    for i in range(len(resp) - 1):
+        r_id = OutputData.get_data_type_id(resp[i])
+        # Get segmentation color output data.
+        if r_id == "segm":
+            segm = SegmentationColors(resp[i])
+            for j in range(segm.get_num()):
+                object_id_temp = segm.get_object_id(j)
+                object_name = object_names[object_id_temp]
+                segmentation_color = segm.get_object_color(j)
+                segmentation_colors_per_object[object_id_temp] = segmentation_color
+        elif r_id == "ipsc":
+            ipsc = IdPassSegmentationColors(resp[i])
+            for j in range(ipsc.get_num_segmentation_colors()):
+                segmentation_colors_in_image.append(ipsc.get_segmentation_color(j))
 
 
     c.communicate({"$type": "terminate"})
-    Change_File_Name.change_file_name((output_directory + "/a/id_0000.png"), (file_name[4:] + "_segmentation.png"))
+
+    Util.change_file_name((output_directory + "/a/id_0000.png"), (file_name[4:] + "_segmentation.png"))
+
+    s = segmentation_colors_per_object
+    print(segmentation_colors_per_object)
+    print(segmentation_colors_per_object[table_id],object_names[table_id],table_id)
+    print(segmentation_colors_per_object[object_id],object_names[object_id],object_id)
+    print(segmentation_colors_per_object[object_id_1],object_names[object_id_1],object_id_1)# dict -> id: color [r,g,b]
+    l1 = str(s[table_id][0]) +" " + str(s[table_id][1]) +" " + str(s[table_id][2]) +" " + str(object_names[table_id]) +" " + str(table_id)
+    l2 = str(s[object_id][0]) +" " + str(s[object_id][1]) +" " + str(s[object_id][2]) +" " + str(object_names[object_id]) +" " + str(object_id)
+    l3 = str(s[object_id_1][0]) +" " + str(s[object_id_1][1]) +" " + str(s[object_id_1][2]) +" " + str(object_names[object_id_1]) +" " + str(object_id_1)
+    l4 = (file_name[4:] + "_segmentation.png")
+    RGB_label_id = [l1,l2,l3,l4]
+    Util.write_to_file(RGB_label_id,"segmentation_info")
+
+    import ExtractBoundingBoxes
+    ExtractBoundingBoxes.extract_bounding_box_and_save()
+
 
 
 """ #This part is only for saving the image.
