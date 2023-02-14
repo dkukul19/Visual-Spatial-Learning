@@ -17,7 +17,13 @@ def extract_bounding_box_and_save():
     table_red,table_green,table_blue,table_name,table_id = segmentation_info[0]
     o1_red,o1_green,o1_blue,o1_name,o1_id = segmentation_info[1]
     o2_red,o2_green,o2_blue,o2_name,o2_id = segmentation_info[2]
-    filename = segmentation_info[3][0]
+    table_name = table_name.replace("*", " ")
+    o1_name=o1_name.replace("*"," ")
+    o2_name=o2_name.replace("*"," ")
+
+
+
+    filename = segmentation_info[3][0].replace("*"," ") # to deal with filenames with spaces in it
     table_color = (int(table_red),int(table_green),int(table_blue))
     o1_color = (int(o1_red),int(o1_green),int(o1_blue))
     o2_color = (int(o2_red),int(o2_green),int(o2_blue))

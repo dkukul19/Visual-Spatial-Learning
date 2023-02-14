@@ -60,13 +60,13 @@ SCENE_AMOUNT = 15000-EPOCH_START
 # (6000,6008)
 # NOTE: 1000 NEXT TO IMAGES' NAMES SHOULD BE CHANGED (REMOVE THE IMG_ PART FROM THE BEGINNING)
 # list_of_objects = list_of_objects[len(list_of_objects)//2:len(list_of_objects)]
-#c = Controller(port=1071)
+c = Controller(port=1071)
 for epoch in range(EPOCH_START, EPOCH_START+SCENE_AMOUNT):
 
 
-    port_no = 1071+ ((epoch%SCENE_AMOUNT)%2)
-    c = Controller(port=port_no)
-    print(port_no)
+    #port_no = 1071+ ((epoch%SCENE_AMOUNT)%2)
+    #c = Controller(port=port_no)
+    #print(port_no)
 
 
     iteration = epoch
@@ -630,8 +630,13 @@ for epoch in range(EPOCH_START, EPOCH_START+SCENE_AMOUNT):
             for j in range(ipsc.get_num_segmentation_colors()):
                 segmentation_colors_in_image.append(ipsc.get_segmentation_color(j))
 
-
-    c.communicate({"$type": "terminate"})
+    c.communicate([{"$type": "destroy_object","id": table_id},
+                   {"$type": "send_rigidbodies", "frequency": "never"}])
+    c.communicate([{"$type": "destroy_object", "id": object_id_1},
+                   {"$type": "send_rigidbodies", "frequency": "never"}])
+    c.communicate([{"$type": "destroy_object", "id": object_id},
+                   {"$type": "send_rigidbodies", "frequency": "never"}])
+    #c.communicate({"$type": "terminate"})
 
     Util.change_file_name((output_directory + "/a/id_0000.png"), (file_name[4:] + "_segmentation.png"))
 
@@ -640,10 +645,10 @@ for epoch in range(EPOCH_START, EPOCH_START+SCENE_AMOUNT):
     print(segmentation_colors_per_object[table_id],object_names[table_id],table_id)
     print(segmentation_colors_per_object[object_id],object_names[object_id],object_id)
     print(segmentation_colors_per_object[object_id_1],object_names[object_id_1],object_id_1)# dict -> id: color [r,g,b]
-    l1 = str(s[table_id][0]) +" " + str(s[table_id][1]) +" " + str(s[table_id][2]) +" " + str(object_names[table_id]) +" " + str(table_id)
-    l2 = str(s[object_id][0]) +" " + str(s[object_id][1]) +" " + str(s[object_id][2]) +" " + str(object_names[object_id]) +" " + str(object_id)
-    l3 = str(s[object_id_1][0]) +" " + str(s[object_id_1][1]) +" " + str(s[object_id_1][2]) +" " + str(object_names[object_id_1]) +" " + str(object_id_1)
-    l4 = (file_name[4:] + "_segmentation.png")
+    l1 = str(s[table_id][0]) +" " + str(s[table_id][1]) +" " + str(s[table_id][2]) +" " + str(object_names[table_id]).replace(" ","*") +" " + str(table_id)  # replace is used to extract 2-word names as one token
+    l2 = str(s[object_id][0]) +" " + str(s[object_id][1]) +" " + str(s[object_id][2]) +" " + str(object_names[object_id]).replace(" ","*") +" " + str(object_id)
+    l3 = str(s[object_id_1][0]) +" " + str(s[object_id_1][1]) +" " + str(s[object_id_1][2]) +" " + str(object_names[object_id_1]).replace(" ","*") +" " + str(object_id_1)
+    l4 = (file_name[4:] + "_segmentation.png").replace(" ","*") # replace is used to deal with a space in the file name
     RGB_label_id = [l1,l2,l3,l4]
     Util.write_to_file(RGB_label_id,"segmentation_info")
 
