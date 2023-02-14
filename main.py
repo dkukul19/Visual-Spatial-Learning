@@ -19,7 +19,6 @@ from tdw.output_data import OutputData, Images,SegmentationColors, IdPassSegment
 from tdw.add_ons.image_capture import ImageCapture
 from tdw.backend.paths import EXAMPLE_CONTROLLER_OUTPUT_PATH
 
-object_names = []
 object_label_dict = Create_Dict.object_name_label_dict  # (object_labe_dict['034_vray'] = 'camera')
 object_file = open("After_Elimination_Object_names.txt", "r")
 # labels_file = open("Data_Labels", "a")
@@ -189,10 +188,10 @@ for epoch in range(EPOCH_START, EPOCH_START+SCENE_AMOUNT):
     object_id_7 = c.get_unique_id()
     object_id_8 = c.get_unique_id()
 
-    object_names = {table_id: "table",
-                    object_id: o1_label,
-                    object_id_1: o2_label,
-                    }
+    objects_id_to_name_dict = {table_id: "table",
+                               object_id: o1_label,
+                               object_id_1: o2_label,
+                               }
 
     c.communicate(TDWUtils.create_empty_room(12, 12))
     c.communicate({"$type": "set_screen_size", "width": 1024, "height": 1024})
@@ -622,7 +621,7 @@ for epoch in range(EPOCH_START, EPOCH_START+SCENE_AMOUNT):
             segm = SegmentationColors(resp[i])
             for j in range(segm.get_num()):
                 object_id_temp = segm.get_object_id(j)
-                object_name = object_names[object_id_temp]
+                object_name = objects_id_to_name_dict[object_id_temp]
                 segmentation_color = segm.get_object_color(j)
                 segmentation_colors_per_object[object_id_temp] = segmentation_color
         elif r_id == "ipsc":
@@ -630,24 +629,22 @@ for epoch in range(EPOCH_START, EPOCH_START+SCENE_AMOUNT):
             for j in range(ipsc.get_num_segmentation_colors()):
                 segmentation_colors_in_image.append(ipsc.get_segmentation_color(j))
 
-    c.communicate([{"$type": "destroy_object","id": table_id},
-                   {"$type": "send_rigidbodies", "frequency": "never"}])
-    c.communicate([{"$type": "destroy_object", "id": object_id_1},
-                   {"$type": "send_rigidbodies", "frequency": "never"}])
-    c.communicate([{"$type": "destroy_object", "id": object_id},
-                   {"$type": "send_rigidbodies", "frequency": "never"}])
+
+    for id in objects_id_to_name_dict:
+        c.communicate([{"$type": "destroy_object", "id": id},
+                       {"$type": "send_rigidbodies", "frequency": "never"}])
     #c.communicate({"$type": "terminate"})
 
     Util.change_file_name((output_directory + "/a/id_0000.png"), (file_name[4:] + "_segmentation.png"))
 
     s = segmentation_colors_per_object
     print(segmentation_colors_per_object)
-    print(segmentation_colors_per_object[table_id],object_names[table_id],table_id)
-    print(segmentation_colors_per_object[object_id],object_names[object_id],object_id)
-    print(segmentation_colors_per_object[object_id_1],object_names[object_id_1],object_id_1)# dict -> id: color [r,g,b]
-    l1 = str(s[table_id][0]) +" " + str(s[table_id][1]) +" " + str(s[table_id][2]) +" " + str(object_names[table_id]).replace(" ","*") +" " + str(table_id)  # replace is used to extract 2-word names as one token
-    l2 = str(s[object_id][0]) +" " + str(s[object_id][1]) +" " + str(s[object_id][2]) +" " + str(object_names[object_id]).replace(" ","*") +" " + str(object_id)
-    l3 = str(s[object_id_1][0]) +" " + str(s[object_id_1][1]) +" " + str(s[object_id_1][2]) +" " + str(object_names[object_id_1]).replace(" ","*") +" " + str(object_id_1)
+    print(segmentation_colors_per_object[table_id], objects_id_to_name_dict[table_id], table_id)
+    print(segmentation_colors_per_object[object_id], objects_id_to_name_dict[object_id], object_id)
+    print(segmentation_colors_per_object[object_id_1], objects_id_to_name_dict[object_id_1], object_id_1)# dict -> id: color [r,g,b]
+    l1 = str(s[table_id][0]) +" " + str(s[table_id][1]) +" " + str(s[table_id][2]) +" " + str(objects_id_to_name_dict[table_id]).replace(" ", "*") + " " + str(table_id)  # replace is used to extract 2-word names as one token
+    l2 = str(s[object_id][0]) +" " + str(s[object_id][1]) +" " + str(s[object_id][2]) +" " + str(objects_id_to_name_dict[object_id]).replace(" ", "*") + " " + str(object_id)
+    l3 = str(s[object_id_1][0]) +" " + str(s[object_id_1][1]) +" " + str(s[object_id_1][2]) +" " + str(objects_id_to_name_dict[object_id_1]).replace(" ", "*") + " " + str(object_id_1)
     l4 = (file_name[4:] + "_segmentation.png").replace(" ","*") # replace is used to deal with a space in the file name
     RGB_label_id = [l1,l2,l3,l4]
     Util.write_to_file(RGB_label_id,"segmentation_info")
